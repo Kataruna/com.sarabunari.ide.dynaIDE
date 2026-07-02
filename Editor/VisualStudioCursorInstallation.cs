@@ -17,10 +17,10 @@ using Debug = UnityEngine.Debug;
 
 namespace Microsoft.Unity.VisualStudio.Editor
 {
-	internal class VisualStudioCursorInstallation : VisualStudioInstallation
+	internal class VisualStudioDynaIDEInstallation : VisualStudioInstallation
 	{
 		private static readonly IGenerator _generator = new SdkStyleProjectGeneration();
-		internal const string ReuseExistingWindowKey = "cursor_reuse_existing_window";
+		internal const string ReuseExistingWindowKey = "dynaide_reuse_existing_window";
 
 		public override bool SupportsAnalyzers
 		{
@@ -71,11 +71,11 @@ namespace Microsoft.Unity.VisualStudio.Editor
 		private static bool IsCandidateForDiscovery(string path)
 		{
 #if UNITY_EDITOR_OSX
-			return Directory.Exists(path) && Regex.IsMatch(path, ".*Cursor.*.app$", RegexOptions.IgnoreCase);
+			return Directory.Exists(path) && Regex.IsMatch(path, ".*DynaIDE.*.app$", RegexOptions.IgnoreCase);
 #elif UNITY_EDITOR_WIN
-			return File.Exists(path) && Regex.IsMatch(path, ".*Cursor.*.exe$", RegexOptions.IgnoreCase);
+			return File.Exists(path) && Regex.IsMatch(path, ".*DynaIDE.*.exe$", RegexOptions.IgnoreCase);
 #else
-			return File.Exists(path) && path.EndsWith("cursor", StringComparison.OrdinalIgnoreCase);
+			return File.Exists(path) && path.EndsWith("dynaide", StringComparison.OrdinalIgnoreCase);
 #endif
 		}
 
@@ -133,10 +133,10 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			}
 
 			isPrerelease = isPrerelease || editorPath.ToLower().Contains("insider");
-			installation = new VisualStudioCursorInstallation()
+			installation = new VisualStudioDynaIDEInstallation()
 			{
 				IsPrerelease = isPrerelease,
-				Name = "Cursor" + (isPrerelease ? " - Insider" : string.Empty) + (version != null ? $" [{version.ToString(3)}]" : string.Empty),
+				Name = "DynaIDE" + (isPrerelease ? " - Insider" : string.Empty) + (version != null ? $" [{version.ToString(3)}]" : string.Empty),
 				Path = editorPath,
 				Version = version ?? new Version()
 			};
@@ -153,16 +153,16 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			var programFiles = IOPath.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles));
 
 			foreach (var basePath in new[] { localAppPath, programFiles }) {
-				candidates.Add(IOPath.Combine(basePath, "cursor", "cursor.exe"));
+				candidates.Add(IOPath.Combine(basePath, "dynaide", "dynaide.exe"));
 			}
 #elif UNITY_EDITOR_OSX
 			var appPath = IOPath.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles));
-			candidates.AddRange(Directory.EnumerateDirectories(appPath, "Cursor*.app"));
+			candidates.AddRange(Directory.EnumerateDirectories(appPath, "DynaIDE*.app"));
 #elif UNITY_EDITOR_LINUX
 			// Well known locations
-			candidates.Add("/usr/bin/cursor");
-			candidates.Add("/bin/cursor");
-			candidates.Add("/usr/local/bin/cursor");
+			candidates.Add("/usr/bin/dynaide");
+			candidates.Add("/bin/dynaide");
+			candidates.Add("/usr/local/bin/dynaide");
 
 			// Preference ordered base directories relative to which desktop files should be searched
 			candidates.AddRange(GetXdgCandidates());
@@ -253,8 +253,10 @@ namespace Microsoft.Unity.VisualStudio.Editor
     ""configurations"": [
         {
             ""name"": ""Attach to Unity"",
-            ""type"": ""vstuc"",
-            ""request"": ""attach""
+            ""type"": ""mono"",
+            ""request"": ""attach"",
+            ""address"": ""localhost"",
+            ""port"": 56000
         }
      ]
 }";
@@ -290,7 +292,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 					launch.Add(configurationsKey, configurations);
 				}
 
-				if (configurations.Linq.Any(entry => entry.Value[typeKey].Value == "vstuc"))
+				if (configurations.Linq.Any(entry => entry.Value[typeKey].Value == "mono"))
 					return;
 
 				var defaultContent = JSONNode.Parse(DefaultLaunchFileContent);
@@ -439,7 +441,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			}
 		}
 
-		private const string MicrosoftUnityExtensionId = "visualstudiotoolsforunity.vstuc";
+		private const string MicrosoftUnityExtensionId = "muhammad-sammy.csharp";
 		private const string DefaultRecommendedExtensionsContent = @"{
     ""recommendations"": [
       """ + MicrosoftUnityExtensionId + @"""
@@ -500,7 +502,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			}
 		}
 
-		private Process FindRunningCursorWithSolution(string solutionPath)
+		private Process FindRunningDynaIDEWithSolution(string solutionPath)
 		{
 			var normalizedTargetPath = solutionPath.Replace('\\', '/').TrimEnd('/').ToLowerInvariant();
 
@@ -518,13 +520,13 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
 			// Get process name list based on different operating systems
 #if UNITY_EDITOR_OSX
-			processes.AddRange(Process.GetProcessesByName("Cursor"));
-			processes.AddRange(Process.GetProcessesByName("Cursor Helper"));
+			processes.AddRange(Process.GetProcessesByName("DynaIDE"));
+			processes.AddRange(Process.GetProcessesByName("DynaIDE Helper"));
 #elif UNITY_EDITOR_LINUX
-			processes.AddRange(Process.GetProcessesByName("cursor"));
-			processes.AddRange(Process.GetProcessesByName("Cursor"));
+			processes.AddRange(Process.GetProcessesByName("dynaide"));
+			processes.AddRange(Process.GetProcessesByName("DynaIDE"));
 #else
-			processes.AddRange(Process.GetProcessesByName("cursor"));
+			processes.AddRange(Process.GetProcessesByName("dynaide"));
 #endif
 
 			foreach (var process in processes)
@@ -559,7 +561,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				}
 				catch (Exception ex)
 				{
-					Debug.LogError($"[Cursor] Error checking process: {ex}");
+					Debug.LogError($"[DynaIDE] Error checking process: {ex}");
 					continue;
 				}
 			}
@@ -594,7 +596,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
 			if (EditorPrefs.GetBool(ReuseExistingWindowKey, false))
 			{
-				var existingProcess = FindRunningCursorWithSolution(directory);
+				var existingProcess = FindRunningDynaIDEWithSolution(directory);
 				if (existingProcess != null)
 				{
 					try
@@ -608,7 +610,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 					}
 					catch (Exception ex)
 					{
-						Debug.LogError($"[Cursor] Error using existing instance: {ex}");
+						Debug.LogError($"[DynaIDE] Error using existing instance: {ex}");
 					}
 				}
 			}

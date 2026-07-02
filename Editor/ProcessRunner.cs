@@ -125,19 +125,19 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			{
 				var workspaces = new List<string>();
 				var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-				string cursorStoragePath;
+				string storagePath;
 
 #if UNITY_EDITOR_OSX
-				cursorStoragePath = Path.Combine(userProfile, "Library", "Application Support", "cursor", "User", "workspaceStorage");
+				storagePath = Path.Combine(userProfile, "Library", "Application Support", "DynaIDE", "User", "workspaceStorage");
 #elif UNITY_EDITOR_LINUX
-				cursorStoragePath = Path.Combine(userProfile, ".config", "Cursor", "User", "workspaceStorage");
+				storagePath = Path.Combine(userProfile, ".config", "DynaIDE", "User", "workspaceStorage");
 #else
-				cursorStoragePath = Path.Combine(userProfile, "AppData", "Roaming", "cursor", "User", "workspaceStorage");
+				storagePath = Path.Combine(userProfile, "AppData", "Roaming", "DynaIDE", "User", "workspaceStorage");
 #endif
-				
-				if (Directory.Exists(cursorStoragePath))
+
+				if (Directory.Exists(storagePath))
 				{
-					foreach (var workspaceDir in Directory.GetDirectories(cursorStoragePath))
+					foreach (var workspaceDir in Directory.GetDirectories(storagePath))
 					{
 						try
 						{
@@ -189,21 +189,21 @@ namespace Microsoft.Unity.VisualStudio.Editor
 						}
 						catch (Exception ex)
 						{
-							Debug.LogWarning($"[Cursor] Error reading workspace state file: {ex.Message}");
+							Debug.LogWarning($"[DynaIDE] Error reading workspace state file: {ex.Message}");
 							continue;
 						}
 					}
 				}
 				else
 				{
-					Debug.LogWarning($"[Cursor] Workspace storage directory not found: {cursorStoragePath}");
+					Debug.LogWarning($"[DynaIDE] Workspace storage directory not found: {storagePath}");
 				}
 
 				return workspaces.Distinct().ToArray();
 			}
 			catch (Exception ex)
 			{
-				Debug.LogError($"[Cursor] Error getting workspace directory: {ex.Message}");
+				Debug.LogError($"[DynaIDE] Error getting workspace directory: {ex.Message}");
 				return null;
 			}
 		}
