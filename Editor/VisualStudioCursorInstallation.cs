@@ -45,10 +45,13 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			if (!Directory.Exists(extensionsPath))
 				return null;
 
-			return Directory
-				.EnumerateDirectories(extensionsPath, $"{MicrosoftUnityExtensionId}*") // publisherid.extensionid
-				.OrderByDescending(n => n)
-				.FirstOrDefault();
+			// ponytail: ms-dotnettools.csharp can be installed via VSIX; prefer it, fall back to Open VSX alternative
+			foreach (var id in new[] { MsDotnetToolsCsharpId, MicrosoftUnityExtensionId })
+			{
+				var path = Directory.EnumerateDirectories(extensionsPath, $"{id}*").OrderByDescending(n => n).FirstOrDefault();
+				if (path != null) return path;
+			}
+			return null;
 		}
 
 		public override string[] GetAnalyzers()
@@ -248,15 +251,14 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			}
 		}
 
+		private const string VstucExtensionId = "visualstudiotoolsforunity.vstuc";
 		private const string DefaultLaunchFileContent = @"{
     ""version"": ""0.2.0"",
     ""configurations"": [
         {
             ""name"": ""Attach to Unity"",
-            ""type"": ""mono"",
-            ""request"": ""attach"",
-            ""address"": ""localhost"",
-            ""port"": 56000
+            ""type"": ""vstuc"",
+            ""request"": ""attach""
         }
      ]
 }";
@@ -292,7 +294,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 					launch.Add(configurationsKey, configurations);
 				}
 
-				if (configurations.Linq.Any(entry => entry.Value[typeKey].Value == "mono"))
+				if (configurations.Linq.Any(entry => entry.Value[typeKey].Value == "vstuc"))
 					return;
 
 				var defaultContent = JSONNode.Parse(DefaultLaunchFileContent);
@@ -442,9 +444,11 @@ namespace Microsoft.Unity.VisualStudio.Editor
 		}
 
 		private const string MicrosoftUnityExtensionId = "muhammad-sammy.csharp";
+		private const string MsDotnetToolsCsharpId = "ms-dotnettools.csharp";
 		private const string DefaultRecommendedExtensionsContent = @"{
     ""recommendations"": [
-      """ + MicrosoftUnityExtensionId + @"""
+      """ + MicrosoftUnityExtensionId + @""",
+      """ + VstucExtensionId + @"""
     ]
 }
 ";
@@ -480,11 +484,17 @@ namespace Microsoft.Unity.VisualStudio.Editor
 					extensions.Add(recommendationsKey, recommendations);
 				}
 
-				if (recommendations.Linq.Any(entry => entry.Value.Value == MicrosoftUnityExtensionId))
-					return;
-
-				recommendations.Add(MicrosoftUnityExtensionId);
-				WriteAllTextFromJObject(extensionFile, extensions);
+				var changed = false;
+				foreach (var id in new[] { MicrosoftUnityExtensionId, VstucExtensionId })
+				{
+					if (!recommendations.Linq.Any(entry => entry.Value.Value == id))
+					{
+						recommendations.Add(id);
+						changed = true;
+					}
+				}
+				if (changed)
+					WriteAllTextFromJObject(extensionFile, extensions);
 			}
 			catch (Exception)
 			{
