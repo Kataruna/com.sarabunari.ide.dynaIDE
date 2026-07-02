@@ -40,7 +40,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
 		private string GetExtensionPath()
 		{
-			var vscode = IsPrerelease ? ".vscode-insiders" : ".vscode";
+			var vscode = IsPrerelease ? ".dynaide-insiders" : ".dynaide";
 			var extensionsPath = IOPath.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), vscode, "extensions");
 			if (!Directory.Exists(extensionsPath))
 				return null;
