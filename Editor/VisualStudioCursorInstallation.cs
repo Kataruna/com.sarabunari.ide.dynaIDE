@@ -45,8 +45,9 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			if (!Directory.Exists(extensionsPath))
 				return null;
 
-			// ponytail: ms-dotnettools.csharp can be installed via VSIX; prefer it, fall back to Open VSX alternative
-			foreach (var id in new[] { MsDotnetToolsCsharpId, MicrosoftUnityExtensionId })
+			// ponytail: ms-dotnettools.csharp isn't on Open VSX and its devkit sibling hard-fails outside official builds;
+			// dotnetdev-kr-custom.csharp is the discoverable Open VSX rebuild, muhammad-sammy.csharp the older fallback
+			foreach (var id in new[] { DotnetDevKrCustomExtensionId, MicrosoftUnityExtensionId })
 			{
 				var path = Directory.EnumerateDirectories(extensionsPath, $"{id}*").OrderByDescending(n => n).FirstOrDefault();
 				if (path != null) return path;
@@ -444,10 +445,10 @@ namespace Microsoft.Unity.VisualStudio.Editor
 		}
 
 		private const string MicrosoftUnityExtensionId = "muhammad-sammy.csharp";
-		private const string MsDotnetToolsCsharpId = "ms-dotnettools.csharp";
+		private const string DotnetDevKrCustomExtensionId = "dotnetdev-kr-custom.csharp";
 		private const string DefaultRecommendedExtensionsContent = @"{
     ""recommendations"": [
-      """ + MicrosoftUnityExtensionId + @""",
+      """ + DotnetDevKrCustomExtensionId + @""",
       """ + VstucExtensionId + @"""
     ]
 }
@@ -485,7 +486,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 				}
 
 				var changed = false;
-				foreach (var id in new[] { MicrosoftUnityExtensionId, VstucExtensionId })
+				foreach (var id in new[] { DotnetDevKrCustomExtensionId, VstucExtensionId })
 				{
 					if (!recommendations.Linq.Any(entry => entry.Value.Value == id))
 					{
