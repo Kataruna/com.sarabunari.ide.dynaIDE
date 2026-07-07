@@ -1,5 +1,11 @@
 # Code Editor Package for Cursor
 
+## [2.0.29] - 2026-07-07
+
+Integration:
+
+- Recommend `dotnetdev-kr-custom.csharp` instead of `ms-dotnettools.csharp`; installing both it and `muhammad-sammy.csharp` (or `ms-dotnettools.csdevkit`) caused duplicate command registration and broke IntelliSense
+
 ## [2.0.28] - 2026-02-12
 
 Integration:
