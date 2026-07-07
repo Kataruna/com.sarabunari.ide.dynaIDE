@@ -2,13 +2,13 @@
   "name": "com.sarabunari.ide.dynaide",
   "displayName": "DynaIDE Editor",
   "description": "DynaIDE editor integration for Unity. Adds support for generating csproj files for intellisense purposes, auto discovery of installations, etc.",
-  "version": "2.0.28",
+  "version": "2.0.29",
   "unity": "2019.4",
   "unityRelease": "25f1",
   "dependencies": {
     "com.unity.test-framework": "1.1.9"
   },
   "_upm": {
-    "changelog": "Integration:\n\n- Add Multiple or Single DynaIDE Instance Options"
+    "changelog": "Integration:\n\n- Recommend dotnetdev-kr-custom.csharp instead of ms-dotnettools.csharp to avoid IntelliSense-breaking extension conflicts"
   }
 }
