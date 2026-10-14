@@ -1,5 +1,18 @@
 # Code Editor Package for Cursor
 
+## [2.0.30] - 2026-10-14
+
+Integration:
+
+- Fix memory leak: the messaging socket is now disposed on every domain reload on macOS/Linux, not only Windows
+- Reuse-window lookup reads DynaIDE workspace storage once instead of once per running process, and releases process handles
+- Remove the legacy-assembly scan that ran on every domain reload
+
+Project generation:
+
+- Share a single project generator between DynaIDE and Codium
+- Cache analyzer lookup instead of scanning the extensions folder for every assembly
+
 ## [2.0.29] - 2026-07-07
 
 Integration:
