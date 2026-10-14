@@ -19,7 +19,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 {
 	internal class VisualStudioDynaIDEInstallation : VisualStudioInstallation
 	{
-		private static readonly IGenerator _generator = new SdkStyleProjectGeneration();
+		internal static readonly IGenerator SharedGenerator = new SdkStyleProjectGeneration();
 		internal const string ReuseExistingWindowKey = "dynaide_reuse_existing_window";
 
 		public override bool SupportsAnalyzers
@@ -55,20 +55,23 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			return null;
 		}
 
+		// ponytail: cached per domain reload; newly installed extensions are picked up on the next reload
+		private static string[] s_analyzers;
+
 		public override string[] GetAnalyzers()
 		{
-			var vstuPath = GetExtensionPath();
-			if (string.IsNullOrEmpty(vstuPath))
-				return Array.Empty<string>();
+			if (s_analyzers != null)
+				return s_analyzers;
 
-			return GetAnalyzers(vstuPath);
+			var vstuPath = GetExtensionPath();
+			return s_analyzers = string.IsNullOrEmpty(vstuPath) ? Array.Empty<string>() : GetAnalyzers(vstuPath);
 		}
 
 		public override IGenerator ProjectGenerator
 		{
 			get
 			{
-				return _generator;
+				return SharedGenerator;
 			}
 		}
 
@@ -513,7 +516,28 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			}
 		}
 
-		private Process FindRunningDynaIDEWithSolution(string solutionPath)
+		private static bool IsDynaIDERunning()
+		{
+#if UNITY_EDITOR_OSX
+			var names = new[] { "DynaIDE", "DynaIDE Helper" };
+#elif UNITY_EDITOR_LINUX
+			var names = new[] { "dynaide", "DynaIDE" };
+#else
+			var names = new[] { "dynaide" };
+#endif
+			var running = false;
+			foreach (var name in names)
+			{
+				foreach (var process in Process.GetProcessesByName(name))
+				{
+					running = true;
+					process.Dispose();
+				}
+			}
+			return running;
+		}
+
+		private static bool IsWorkspaceOpenInDynaIDE(string solutionPath)
 		{
 			var normalizedTargetPath = solutionPath.Replace('\\', '/').TrimEnd('/').ToLowerInvariant();
 
@@ -527,56 +551,29 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			}
 #endif
 
-			var processes = new List<Process>();
+			if (!IsDynaIDERunning())
+				return false;
 
-			// Get process name list based on different operating systems
-#if UNITY_EDITOR_OSX
-			processes.AddRange(Process.GetProcessesByName("DynaIDE"));
-			processes.AddRange(Process.GetProcessesByName("DynaIDE Helper"));
-#elif UNITY_EDITOR_LINUX
-			processes.AddRange(Process.GetProcessesByName("dynaide"));
-			processes.AddRange(Process.GetProcessesByName("DynaIDE"));
-#else
-			processes.AddRange(Process.GetProcessesByName("dynaide"));
-#endif
+			var workspaces = ProcessRunner.GetDynaIDEWorkspaces();
+			if (workspaces == null)
+				return false;
 
-			foreach (var process in processes)
+			foreach (var workspace in workspaces)
 			{
-				try
-				{
-					var workspaces = ProcessRunner.GetProcessWorkspaces(process);
-					if (workspaces != null && workspaces.Length > 0)
-					{
-						foreach (var workspace in workspaces)
-						{
-							var normalizedWorkspaceDir = workspace.Replace('\\', '/').TrimEnd('/').ToLowerInvariant();
+				var normalizedWorkspaceDir = workspace.Replace('\\', '/').TrimEnd('/').ToLowerInvariant();
 
-#if UNITY_EDITOR_WIN
-							// Keep as is for Windows platform
-#else
-							// Ensure path starts with / for macOS and Linux platforms
-							if (!normalizedWorkspaceDir.StartsWith("/"))
-							{
-								normalizedWorkspaceDir = "/" + normalizedWorkspaceDir;
-							}
+#if !UNITY_EDITOR_WIN
+				// Ensure path starts with / for macOS and Linux platforms
+				if (!normalizedWorkspaceDir.StartsWith("/"))
+					normalizedWorkspaceDir = "/" + normalizedWorkspaceDir;
 #endif
 
-							if (string.Equals(normalizedWorkspaceDir, normalizedTargetPath, StringComparison.OrdinalIgnoreCase) ||
-								normalizedTargetPath.StartsWith(normalizedWorkspaceDir + "/", StringComparison.OrdinalIgnoreCase) ||
-								normalizedWorkspaceDir.StartsWith(normalizedTargetPath + "/", StringComparison.OrdinalIgnoreCase))
-							{
-								return process;
-							}
-						}
-					}
-				}
-				catch (Exception ex)
-				{
-					Debug.LogError($"[DynaIDE] Error checking process: {ex}");
-					continue;
-				}
+				if (string.Equals(normalizedWorkspaceDir, normalizedTargetPath, StringComparison.OrdinalIgnoreCase) ||
+					normalizedTargetPath.StartsWith(normalizedWorkspaceDir + "/", StringComparison.OrdinalIgnoreCase) ||
+					normalizedWorkspaceDir.StartsWith(normalizedTargetPath + "/", StringComparison.OrdinalIgnoreCase))
+					return true;
 			}
-			return null;
+			return false;
 		}
 
 		private static string TryFindWorkspace(string directory)
@@ -607,8 +604,7 @@ namespace Microsoft.Unity.VisualStudio.Editor
 
 			if (EditorPrefs.GetBool(ReuseExistingWindowKey, false))
 			{
-				var existingProcess = FindRunningDynaIDEWithSolution(directory);
-				if (existingProcess != null)
+				if (IsWorkspaceOpenInDynaIDE(directory))
 				{
 					try
 					{

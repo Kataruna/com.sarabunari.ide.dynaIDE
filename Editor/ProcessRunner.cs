@@ -116,11 +116,9 @@ namespace Microsoft.Unity.VisualStudio.Editor
 			sb?.Append(data);
 		}
 
-		public static string[] GetProcessWorkspaces(Process process)
+		// Workspace storage is per-user, not per-process: read it once per lookup.
+		public static string[] GetDynaIDEWorkspaces()
 		{
-			if (process == null)
-				return null;
-
 			try
 			{
 				var workspaces = new List<string>();

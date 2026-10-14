@@ -15,7 +15,6 @@ using IOPath = System.IO.Path;
 
 namespace Microsoft.Unity.VisualStudio.Editor {
 	internal class VisualStudioCodiumInstallation : VisualStudioInstallation {
-		private static readonly IGenerator _generator = new SdkStyleProjectGeneration();
 
 		public override bool SupportsAnalyzers {
 			get {
@@ -51,7 +50,7 @@ namespace Microsoft.Unity.VisualStudio.Editor {
 
 		public override IGenerator ProjectGenerator {
 			get {
-				return _generator;
+				return VisualStudioDynaIDEInstallation.SharedGenerator;
 			}
 		}
 
